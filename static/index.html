@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartCity Traffic Simulator — Grand Tunis</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚦</text></svg>">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --card-border: rgba(51, 65, 85, 0.6);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --blocked: #991b1b;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background-color: var(--bg);
+      background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #090d16 75%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand h1 {
+      font-size: 22px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 10px #34d399;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.2); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      backdrop-filter: blur(12px);
+    }
+    .kpi-title {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .kpi-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .presets-card, .actions-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(12px);
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    button {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button:hover {
+      background: #334155;
+      border-color: #475569;
+      transform: translateY(-1px);
+    }
+    button.active {
+      background: #0284c7;
+      border-color: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+    }
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #f87171;
+    }
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+    }
+    .btn-success {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.35);
+      color: #34d399;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+    }
+    th {
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+    .status-tag {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .tag-FLUID { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .tag-MODERATE { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .tag-HEAVY { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    .tag-BLOCKED { background: rgba(153, 27, 27, 0.35); color: #fca5a5; border: 1px solid #ef4444; }
+    .bar-bg {
+      background: #1e293b;
+      height: 6px;
+      border-radius: 3px;
+      overflow: hidden;
+      width: 100px;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <span style="font-size: 28px;">🚦</span>
+        <div>
+          <h1>Simulateur de Trafic Urbain — Grand Tunis</h1>
+          <p style="font-size: 12px; color: var(--text-muted);">Moteur de simulation autonome connecté à SmartCity Insight AI</p>
+        </div>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <div class="badge">
+          <span class="pulse-dot"></span>
+          <span>Simulation Active (Temps Réel)</span>
+        </div>
+        <a href="/docs" target="_blank" style="color: var(--accent); font-size: 13px; text-decoration: none; font-weight: 600; padding: 6px 12px; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px;">
+          📖 Swagger API
+        </a>
+      </div>
+    </header>
+
+    <!-- KPI GRID -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-title">Indice Moyen de Congestion</div>
+        <div class="kpi-value" id="kpi-index">--</div>
+        <div class="kpi-sub" id="kpi-status">Chargement...</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Vitesse Urbaine Moyenne</div>
+        <div class="kpi-value" id="kpi-speed">-- km/h</div>
+        <div class="kpi-sub">Grand Tunis</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Tronçons Saturés / Total</div>
+        <div class="kpi-value" id="kpi-congested">-- / 12</div>
+        <div class="kpi-sub">Indice ≥ 3.2 (Rouge)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Accidents & Bouchons Actifs</div>
+        <div class="kpi-value" id="kpi-incidents" style="color: #f87171;">--</div>
+        <div class="kpi-sub">Injectés ou reçus via API</div>
+      </div>
+    </div>
+
+    <!-- PRESETS SCENARIOS -->
+    <div class="presets-card">
+      <div class="section-title">
+        <span>⚡ Scénarios Prédéfinis (Prêts pour Démonstration)</span>
+      </div>
+      <div class="btn-group">
+        <button id="btn-fluid" onclick="setPreset('FLUID')">🟢 Trafic Fluide (Nuit)</button>
+        <button id="btn-normal" onclick="setPreset('NORMAL')">🟡 Circulation Normale</button>
+        <button id="btn-morning" onclick="setPreset('RUSH_HOUR_MORNING')">🔴 Heure de Pointe Matin (08h00)</button>
+        <button id="btn-evening" onclick="setPreset('RUSH_HOUR_EVENING')">🌇 Heure de Pointe Soir (17h30)</button>
+        <button id="btn-rain" onclick="setPreset('RAIN_STORM')">⛈️ Intempéries / Pluie Sévère</button>
+        <button id="btn-gridlock" onclick="setPreset('GRIDLOCK')">⛔ Paralysie Totale (Gridlock)</button>
+      </div>
+    </div>
+
+    <!-- ACCIDENT INJECTION & ACTIONS -->
+    <div class="actions-card">
+      <div class="section-title">
+        <span>🚨 Déclencheur d'Incidents & Synchronisation SmartCity</span>
+      </div>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+        <button class="btn-danger" onclick="injectAccident('seg_route_x_sud')">
+          💥 Simuler Accident sur Route X (Bardo)
+        </button>
+        <button class="btn-danger" onclick="injectAccident('seg_mohamed_v')">
+          💥 Simuler Accident sur Avenue Mohamed V
+        </button>
+        <button class="btn-danger" onclick="injectAccident('seg_rn9_marsa_ouest')">
+          💥 Simuler Accident sur RN9 (Lac 1)
+        </button>
+        <button class="btn-success" onclick="clearAccidents()">
+          🧹 Lever tous les accidents & Libérer le trafic
+        </button>
+      </div>
+    </div>
+
+    <!-- ROAD SEGMENTS TABLE -->
+    <div class="presets-card">
+      <div class="section-title">
+        <span>🗺️ État Instantané des Tronçons Routiers du Grand Tunis</span>
+      </div>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Artère Routière</th>
+              <th>Zone Métropolitaine</th>
+              <th>Vitesse Direct</th>
+              <th>Indice (1-5)</th>
+              <th>Niveau de Congestion</th>
+              <th>Incidents</th>
+            </tr>
+          </thead>
+          <tbody id="segments-table-body">
+            <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Chargement des tronçons...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let activePreset = 'NORMAL';
+
+    async function fetchTrafficData() {
+      try {
+        const [sumRes, segRes] = await Promise.all([
+          fetch('/api/traffic/summary'),
+          fetch('/api/traffic/segments')
+        ]);
+        const summary = await sumRes.json();
+        const segments = await segRes.json();
+
+        // Update KPIs
+        document.getElementById('kpi-index').textContent = summary.average_congestion_index.toFixed(2);
+        document.getElementById('kpi-speed').textContent = `${summary.average_speed_kmh} km/h`;
+        document.getElementById('kpi-congested').textContent = `${summary.congested_segments_count} / ${summary.total_segments}`;
+        document.getElementById('kpi-incidents').textContent = summary.active_incidents;
+        document.getElementById('kpi-status').textContent = summary.global_status;
+
+        // Active preset buttons
+        activePreset = summary.preset_name;
+        document.querySelectorAll('.btn-group button').forEach(b => b.classList.remove('active'));
+        if (activePreset === 'FLUID') document.getElementById('btn-fluid')?.classList.add('active');
+        if (activePreset === 'NORMAL') document.getElementById('btn-normal')?.classList.add('active');
+        if (activePreset === 'RUSH_HOUR_MORNING') document.getElementById('btn-morning')?.classList.add('active');
+        if (activePreset === 'RUSH_HOUR_EVENING') document.getElementById('btn-evening')?.classList.add('active');
+        if (activePreset === 'RAIN_STORM') document.getElementById('btn-rain')?.classList.add('active');
+        if (activePreset === 'GRIDLOCK') document.getElementById('btn-gridlock')?.classList.add('active');
+
+        // Update table
+        const tbody = document.getElementById('segments-table-body');
+        tbody.innerHTML = segments.map(s => {
+          const pct = Math.min(100, Math.round(((s.congestion_index - 1) / 4) * 100));
+          return `
+            <tr>
+              <td><strong>${s.name}</strong></td>
+              <td><span style="color: #94a3b8; font-size: 11px;">${s.zone}</span></td>
+              <td><strong style="color: ${s.color}">${s.current_speed_kmh} km/h</strong> <span style="font-size: 11px; color: #64748b;">(max ${s.base_speed_kmh})</span></td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span>${s.congestion_index.toFixed(1)}</span>
+                  <div class="bar-bg">
+                    <div class="bar-fill" style="width: ${pct}%; background-color: ${s.color};"></div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="status-tag tag-${s.congestion_level}">${s.congestion_level}</span></td>
+              <td>${s.has_incident ? `<span style="color: #f87171; font-weight: bold;">${s.incident_description || '⚠️ Incident actif'}</span>` : '<span style="color: #475569;">Normal</span>'}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Erreur chargement simulateur:', err);
+      }
+    }
+
+    async function setPreset(name) {
+      await fetch('/api/simulation/preset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preset: name })
+      });
+      fetchTrafficData();
+    }
+
+    async function injectAccident(segmentId) {
+      const segCoords = {
+        'seg_route_x_sud': { lat: 36.8115, lng: 10.1384, desc: 'Collision carambolage Route X Bardo' },
+        'seg_mohamed_v': { lat: 36.8142, lng: 10.1824, desc: 'Accident face Cité de la Culture' },
+        'seg_rn9_marsa_ouest': { lat: 36.8280, lng: 10.2250, desc: 'Accident voie rapide RN9 Lac' },
+      }[segmentId] || { lat: 36.8002, lng: 10.1865, desc: 'Accident urbain' };
+
+      await fetch('/api/traffic/events/accident', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          latitude: segCoords.lat,
+          longitude: segCoords.lng,
+          gravite: 'CRITIQUE',
+          description: segCoords.desc
+        })
+      });
+      fetchTrafficData();
+    }
+
+    async function clearAccidents() {
+      await fetch('/api/traffic/events/clear', { method: 'POST' });
+      fetchTrafficData();
+    }
+
+    // Polling rafraîchissement automatique toutes les 3 secondes
+    fetchTrafficData();
+    setInterval(fetchTrafficData, 3000);
+  </script>
+</body>
+</html>
