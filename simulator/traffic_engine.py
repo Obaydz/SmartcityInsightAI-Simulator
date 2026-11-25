@@ -11,7 +11,7 @@ from .models import (
     RouteDelayResponse,
     AccidentEvent,
 )
-from .roads_tunis import ROAD_SEGMENTS_TUNIS
+from .roads_cap_bon import ROAD_SEGMENTS_CAP_BON
 
 
 def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -28,11 +28,41 @@ def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) ->
     return R * 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
 
 
+def _point_to_segment_distance_km(
+    lat: float, lon: float, lat1: float, lon1: float, lat2: float, lon2: float
+) -> float:
+    """Calcule la distance minimale en km entre un point GPS et un segment [A, B]."""
+    cos_lat = math.cos(math.radians(lat))
+    km_per_deg_lat = 111.32
+    km_per_deg_lon = 111.32 * cos_lat
+
+    px = (lon - lon1) * km_per_deg_lon
+    py = (lat - lat1) * km_per_deg_lat
+    dx = (lon2 - lon1) * km_per_deg_lon
+    dy = (lat2 - lat1) * km_per_deg_lat
+
+    seg_len_sq = dx * dx + dy * dy
+    if seg_len_sq == 0.0:
+        return haversine_distance_km(lat, lon, lat1, lon1)
+
+    t = max(0.0, min(1.0, (px * dx + py * dy) / seg_len_sq))
+    proj_lat = lat1 + t * (lat2 - lat1)
+    proj_lon = lon1 + t * (lon2 - lon1)
+    return haversine_distance_km(lat, lon, proj_lat, proj_lon)
+
+
 def point_to_polyline_min_distance(lat: float, lon: float, polyline: List[List[float]]) -> float:
     """Calcule la distance minimale en km entre un point GPS et une polyligne de tronçon."""
+    if not polyline:
+        return float("inf")
+    if len(polyline) == 1:
+        return haversine_distance_km(lat, lon, polyline[0][0], polyline[0][1])
+
     min_dist = float("inf")
-    for pt in polyline:
-        d = haversine_distance_km(lat, lon, pt[0], pt[1])
+    for i in range(len(polyline) - 1):
+        d = _point_to_segment_distance_km(
+            lat, lon, polyline[i][0], polyline[i][1], polyline[i + 1][0], polyline[i + 1][1]
+        )
         if d < min_dist:
             min_dist = d
     return min_dist
@@ -40,7 +70,8 @@ def point_to_polyline_min_distance(lat: float, lon: float, polyline: List[List[f
 
 class TrafficEngine:
     """
-    Moteur de simulation dynamique de circulation pour le Grand Tunis.
+    Moteur de simulation dynamique de circulation pour le Cap Bon Nord-Est
+    (Kélibia, Hammam El Ghezaz, El Haouaria et environs immédiats).
     Gère les flux routiers, les heures de pointe, les intempéries et les impacts d'accidents.
     """
 
@@ -63,7 +94,7 @@ class TrafficEngine:
 
     def _initialize_segments(self):
         """Initialise tous les tronçons routiers avec les conditions du préréglage actif."""
-        for seg in ROAD_SEGMENTS_TUNIS:
+        for seg in ROAD_SEGMENTS_CAP_BON:
             base_speed = seg["base_speed_kmh"]
             index = 1.6 + random.uniform(-0.2, 0.3)
             current_speed = max(10.0, base_speed * (1.0 - (index - 1.0) * 0.18))
@@ -106,12 +137,12 @@ class TrafficEngine:
             if segment.has_incident:
                 continue
 
-            # Biais particulier selon la zone pour réalisme tunisois
+            # Biais particulier selon la zone du Cap Bon Nord-Est pour réalisme local
             zone_bias = 0.0
-            if "RUSH_HOUR_MORNING" in preset and segment.zone in ["TUNIS_CENTRE", "BARDO"]:
+            if "RUSH_HOUR_MORNING" in preset and segment.zone in ["KELIBIA", "MENZEL_HORR", "DAR_ALLOUCHE"]:
                 zone_bias = 0.4
-            elif "RUSH_HOUR_EVENING" in preset and segment.zone in ["BANLIEUE_NORD", "BANLIEUE_SUD", "LAC"]:
-                zone_bias = 0.5
+            elif "RUSH_HOUR_EVENING" in preset and segment.zone in ["KELIBIA", "HAMMAM_EL_GHEZAZ", "EL_HAOUARIA", "KERKOUANE"]:
+                zone_bias = 0.45
 
             idx = min(5.0, max(1.0, params["index_mean"] + zone_bias + random.uniform(-params["index_spread"], params["index_spread"])))
             speed = max(8.0, segment.base_speed_kmh * params["speed_ratio"] * (1.0 - (idx - 1.0) * 0.12))
@@ -207,32 +238,43 @@ class TrafficEngine:
         distance_straight = haversine_distance_km(
             req.origin_lat, req.origin_lng, req.destination_lat, req.destination_lng
         )
-        # Distance routière urbaine réelle (~1.3x la ligne droite dans le tissu urbain de Tunis)
-        distance_km = round(distance_straight * 1.32, 2)
+        # Distance routière réelle (~1.28x la ligne droite sur le réseau du Cap Bon)
+        distance_km = round(distance_straight * 1.28, 2)
 
         # Identifier les tronçons intersectant ou proches du trajet
-        lat_min = min(req.origin_lat, req.destination_lat) - 0.015
-        lat_max = max(req.origin_lat, req.destination_lat) + 0.015
-        lng_min = min(req.origin_lng, req.destination_lng) - 0.015
-        lng_max = max(req.origin_lng, req.destination_lng) + 0.015
+        lat_min = min(req.origin_lat, req.destination_lat) - 0.02
+        lat_max = max(req.origin_lat, req.destination_lat) + 0.02
+        lng_min = min(req.origin_lng, req.destination_lng) - 0.02
+        lng_max = max(req.origin_lng, req.destination_lng) + 0.02
 
         impacted_segments = []
         weighted_indices = []
+        impacted_base_speeds = []
 
         for seg in self.segments.values():
-            for pt in seg.coordinates:
-                if lat_min <= pt[0] <= lat_max and lng_min <= pt[1] <= lng_max:
-                    impacted_segments.append(seg.name)
-                    weighted_indices.append(seg.congestion_index)
-                    break
+            pts = seg.coordinates
+            hit = any(lat_min <= pt[0] <= lat_max and lng_min <= pt[1] <= lng_max for pt in pts)
+            if not hit and len(pts) >= 2:
+                # Vérifier aussi les points milieux des sous-segments pour les axes interurbains longs
+                for i in range(len(pts) - 1):
+                    mid_lat = (pts[i][0] + pts[i + 1][0]) * 0.5
+                    mid_lng = (pts[i][1] + pts[i + 1][1]) * 0.5
+                    if lat_min <= mid_lat <= lat_max and lng_min <= mid_lng <= lng_max:
+                        hit = True
+                        break
+            if hit:
+                impacted_segments.append(seg.name)
+                weighted_indices.append(seg.congestion_index)
+                impacted_base_speeds.append(seg.base_speed_kmh)
 
         if not weighted_indices:
             avg_index = sum(s.congestion_index for s in self.segments.values()) / max(1, len(self.segments))
+            nominal_speed = 62.0
         else:
             avg_index = sum(weighted_indices) / len(weighted_indices)
+            avg_base_speed = sum(impacted_base_speeds) / len(impacted_base_speeds)
+            nominal_speed = min(85.0, max(45.0, avg_base_speed * 0.9))
 
-        # Vitesse d'un véhicule d'urgence avec gyrophares (nominale ~ 45-50 km/h à Tunis)
-        nominal_speed = 46.0
         free_flow_duration_min = round((distance_km / nominal_speed) * 60.0, 1)
 
         # Facteur de congestion
@@ -267,7 +309,7 @@ class TrafficEngine:
         )
 
     def get_summary(self) -> TrafficSummary:
-        """Génère une synthèse métropolitaine de la circulation."""
+        """Génère une synthèse régionale de la circulation."""
         segs = list(self.segments.values())
         if not segs:
             avg_idx = 1.0

@@ -1,12 +1,12 @@
-# 🚦 SmartCity Traffic Simulator — Grand Tunis
+# 🚦 SmartCity Traffic Simulator — Cap Bon Nord-Est
 
-Moteur de simulation autonome et dynamique de la circulation urbaine dans le Grand Tunis, conçu pour remplacer l'API Google Maps Traffic dans le cadre du projet métropolitain **SmartCity Insight AI**.
+Moteur de simulation autonome et dynamique de la circulation routière dans le **Cap Bon Nord-Est** (Gouvernorat de Nabeul : **Kélibia, Hammam El Ghezaz, El Haouaria** et leurs environs immédiats : **Dar Allouche, Kerkouane, Azmour, Menzel Horr**), conçu pour remplacer l'API Google Maps Traffic dans le cadre du projet **SmartCity Insight AI**.
 
 ---
 
 ## 🎯 Pourquoi ce projet séparé ?
 
-1. **Remplacement de l'API Google Maps Traffic** : En l'absence de clé Google Maps avec accès aux données de trafic temps réel, ce simulateur modélise fidèlement les 12 principales artères du Grand Tunis (Avenue Habib Bourguiba, Avenue Mohamed V, Route X, RN9 Marsa, Sortie Sud Bab Alioua, GP8 Ariana, etc.).
+1. **Remplacement de l'API Google Maps Traffic** : En l'absence de clé Google Maps avec accès aux données de trafic temps réel, ce simulateur modélise fidèlement **50 tronçons routiers** du Cap Bon Nord-Est (Kélibia Centre & Port/El Mansourah, RR27 Hammam El Ghezaz, route côtière Kerkouane–Dar Allouche, RR27 Nord vers El Haouaria, Les Grottes, Sidi Daoud / Zaouiet El Mgaïez, route d'Azmour et axe MC27 Menzel Horr–Kélibia).
 2. **Couche de Trafic Leaflet** : Fournit les coordonnées géodésiques, vitesses et niveaux de congestion (Vert `#10b981`, Orange `#f59e0b`, Rouge `#ef4444`, Bloqué `#991b1b`) pour affichage cartographique interactif dans `smartcity-insight-ai`.
 3. **Calcul de Retard Réel d'Intervention** : Remplace l'ancien délai statique de 2 minutes par un calcul d'itinéraire tenant compte des tronçons réellement traversés par les ambulances ou camions de la Protection Civile.
 4. **Alimentation du Modèle IA Risk Map (Random Forest)** : Expose l'indice moyen de trafic par zone (`trafic_index`) pour prédire le risque d'accident.
@@ -48,7 +48,7 @@ run_simulator.bat
 | Méthode | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/traffic/segments` | Liste complète des tronçons avec géométrie, vitesse et couleur |
-| `GET` | `/api/traffic/summary` | Synthèse métropolitaine globale (indice moyen, état) |
+| `GET` | `/api/traffic/summary` | Synthèse régionale globale (indice moyen, état) |
 | `GET` | `/api/traffic/zone-risk-data` | Indice de trafic par zone pour le modèle Random Forest |
 | `POST` | `/api/traffic/route-delay` | Calcul du retard et de la durée d'intervention avec trafic |
 | `POST` | `/api/traffic/events/accident` | Déclaration d'un accident et création d'un bouchon localisé |

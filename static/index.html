@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartCity Traffic Simulator — Grand Tunis</title>
+  <title>SmartCity Traffic Simulator — Cap Bon Nord-Est (Kélibia / El Haouaria)</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚦</text></svg>">
   <style>
     :root {
@@ -216,8 +216,8 @@
       <div class="brand">
         <span style="font-size: 28px;">🚦</span>
         <div>
-          <h1>Simulateur de Trafic Urbain — Grand Tunis</h1>
-          <p style="font-size: 12px; color: var(--text-muted);">Moteur de simulation autonome connecté à SmartCity Insight AI</p>
+          <h1>Simulateur de Trafic — Cap Bon Nord-Est</h1>
+          <p style="font-size: 12px; color: var(--text-muted);">Kélibia, Hammam El Ghezaz, El Haouaria, Dar Allouche, Kerkouane, Azmour & Menzel Horr</p>
         </div>
       </div>
       <div style="display: flex; gap: 12px; align-items: center;">
@@ -239,13 +239,13 @@
         <div class="kpi-sub" id="kpi-status">Chargement...</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-title">Vitesse Urbaine Moyenne</div>
+        <div class="kpi-title">Vitesse Moyenne Réseau</div>
         <div class="kpi-value" id="kpi-speed">-- km/h</div>
-        <div class="kpi-sub">Grand Tunis</div>
+        <div class="kpi-sub">Cap Bon Nord-Est (Kélibia – El Haouaria)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-title">Tronçons Saturés / Total</div>
-        <div class="kpi-value" id="kpi-congested">-- / 12</div>
+        <div class="kpi-value" id="kpi-congested">-- / 50</div>
         <div class="kpi-sub">Indice ≥ 3.2 (Rouge)</div>
       </div>
       <div class="kpi-card">
@@ -276,14 +276,17 @@
         <span>🚨 Déclencheur d'Incidents & Synchronisation SmartCity</span>
       </div>
       <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
-        <button class="btn-danger" onclick="injectAccident('seg_route_x_sud')">
-          💥 Simuler Accident sur Route X (Bardo)
+        <button class="btn-danger" onclick="injectAccident('seg_kelibia_centre_martyrs')">
+          💥 Simuler Accident à Kélibia Centre
         </button>
-        <button class="btn-danger" onclick="injectAccident('seg_mohamed_v')">
-          💥 Simuler Accident sur Avenue Mohamed V
+        <button class="btn-danger" onclick="injectAccident('seg_heg_rr27_entree_sud')">
+          💥 Simuler Accident à Hammam El Ghezaz
         </button>
-        <button class="btn-danger" onclick="injectAccident('seg_rn9_marsa_ouest')">
-          💥 Simuler Accident sur RN9 (Lac 1)
+        <button class="btn-danger" onclick="injectAccident('seg_kerkouane_rr27_dar_allouche')">
+          💥 Simuler Accident (Kerkouane / Dar Allouche)
+        </button>
+        <button class="btn-danger" onclick="injectAccident('seg_haouaria_entree_sud_rr27')">
+          💥 Simuler Accident vers El Haouaria
         </button>
         <button class="btn-success" onclick="clearAccidents()">
           🧹 Lever tous les accidents & Libérer le trafic
@@ -293,15 +296,25 @@
 
     <!-- ROAD SEGMENTS TABLE -->
     <div class="presets-card">
-      <div class="section-title">
-        <span>🗺️ État Instantané des Tronçons Routiers du Grand Tunis</span>
+      <div class="section-title" style="justify-content: space-between; flex-wrap: wrap;">
+        <span>🗺️ État Instantané des 50 Tronçons — Cap Bon Nord-Est</span>
+        <select id="zone-filter" onchange="fetchTrafficData()" style="background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; padding: 6px 10px; font-size: 13px;">
+          <option value="ALL">Toutes les zones (50)</option>
+          <option value="KELIBIA">Kélibia (10)</option>
+          <option value="HAMMAM_EL_GHEZAZ">Hammam El Ghezaz (7)</option>
+          <option value="EL_HAOUARIA">El Haouaria (10)</option>
+          <option value="DAR_ALLOUCHE">Dar Allouche (6)</option>
+          <option value="KERKOUANE">Kerkouane (6)</option>
+          <option value="AZMOUR">Azmour (5)</option>
+          <option value="MENZEL_HORR">Menzel Horr (6)</option>
+        </select>
       </div>
       <div style="overflow-x: auto;">
         <table>
           <thead>
             <tr>
               <th>Artère Routière</th>
-              <th>Zone Métropolitaine</th>
+              <th>Zone / Délégation</th>
               <th>Vitesse Direct</th>
               <th>Indice (1-5)</th>
               <th>Niveau de Congestion</th>
@@ -346,8 +359,13 @@
         if (activePreset === 'GRIDLOCK') document.getElementById('btn-gridlock')?.classList.add('active');
 
         // Update table
+        const selectedZone = document.getElementById('zone-filter')?.value || 'ALL';
+        const filteredSegments = selectedZone === 'ALL'
+          ? segments
+          : segments.filter(s => s.zone === selectedZone);
+
         const tbody = document.getElementById('segments-table-body');
-        tbody.innerHTML = segments.map(s => {
+        tbody.innerHTML = filteredSegments.map(s => {
           const pct = Math.min(100, Math.round(((s.congestion_index - 1) / 4) * 100));
           return `
             <tr>
@@ -383,10 +401,11 @@
 
     async function injectAccident(segmentId) {
       const segCoords = {
-        'seg_route_x_sud': { lat: 36.8115, lng: 10.1384, desc: 'Collision carambolage Route X Bardo' },
-        'seg_mohamed_v': { lat: 36.8142, lng: 10.1824, desc: 'Accident face Cité de la Culture' },
-        'seg_rn9_marsa_ouest': { lat: 36.8280, lng: 10.2250, desc: 'Accident voie rapide RN9 Lac' },
-      }[segmentId] || { lat: 36.8002, lng: 10.1865, desc: 'Accident urbain' };
+        'seg_kelibia_centre_martyrs': { lat: 36.8476, lng: 11.0939, desc: 'Collision Kélibia Centre (Av. des Martyrs)' },
+        'seg_heg_rr27_entree_sud': { lat: 36.8730, lng: 11.1080, desc: 'Accident RR27 entrée Hammam El Ghezaz' },
+        'seg_kerkouane_rr27_dar_allouche': { lat: 36.9515, lng: 11.0860, desc: 'Accident axe Kerkouane — Dar Allouche' },
+        'seg_haouaria_entree_sud_rr27': { lat: 37.0220, lng: 11.0285, desc: 'Accident RR27 Nord vers El Haouaria' },
+      }[segmentId] || { lat: 36.8476, lng: 11.0939, desc: 'Accident routier Cap Bon Nord-Est' };
 
       await fetch('/api/traffic/events/accident', {
         method: 'POST',

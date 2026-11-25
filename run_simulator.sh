@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "====================================================================="
-echo " SmartCity Traffic Simulator — Grand Tunis (FastAPI Port 8001)"
+echo " SmartCity Traffic Simulator — Cap Bon Nord-Est (Kélibia / El Haouaria) (Port 8001)"
 echo "====================================================================="
 cd "$(dirname "$0")"
 

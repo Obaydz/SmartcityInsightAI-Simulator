@@ -53,9 +53,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="SmartCity Insight AI — Simulateur de Trafic Métropolitain (Grand Tunis)",
+    title="SmartCity Insight AI — Simulateur de Trafic (Cap Bon Nord-Est : Kélibia, Hammam El Ghezaz, El Haouaria)",
     description=(
-        "API autonome de simulation de la circulation urbaine en temps réel pour le Grand Tunis. "
+        "API autonome de simulation de la circulation routière en temps réel pour le Cap Bon Nord-Est "
+        "(Kélibia, Hammam El Ghezaz, El Haouaria, Dar Allouche, Kerkouane, Azmour, Menzel Horr). "
         "Remplace l'API Google Maps Traffic & Routes en fournissant la congestion des tronçons, "
         "le calcul dynamique des retards d'intervention d'urgence et la synchronisation avec les alertes d'accidents."
     ),
@@ -83,7 +84,7 @@ async def health_check():
     return {
         "status": "online",
         "service": "smartcity-traffic-simulator",
-        "city": "Grand Tunis, Tunisie",
+        "city": "Cap Bon Nord-Est (Kélibia, Hammam El Ghezaz, El Haouaria), Tunisie",
         "preset": engine.preset_name,
     }
 
@@ -94,9 +95,9 @@ async def get_traffic_segments():
     return list(engine.segments.values())
 
 
-@app.get("/api/traffic/summary", response_model=TrafficSummary, summary="Synthèse métropolitaine globale du trafic")
+@app.get("/api/traffic/summary", response_model=TrafficSummary, summary="Synthèse régionale globale du trafic")
 async def get_traffic_summary():
-    """Retourne l'indice moyen, la vitesse moyenne et l'état global du trafic métropolitain."""
+    """Retourne l'indice moyen, la vitesse moyenne et l'état global du trafic dans le Cap Bon Nord-Est."""
     return engine.get_summary()
 
 
