@@ -55,3 +55,4 @@ run_simulator.bat
 | `POST` | `/api/traffic/events/clear` | Rétablissement du trafic après clôture d'intervention |
 | `POST` | `/api/simulation/preset` | Bascule immédiate de scénario (FLUID, NORMAL, RUSH_HOUR, RAIN_STORM, GRIDLOCK) |
 | `WS` | `/ws/traffic` | Flux WebSocket poussant les variations en temps réel |
+# SmartcityInsightAI-Simulator
